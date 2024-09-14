@@ -22,7 +22,7 @@
 2. **スクリプトの実行**
 
    ```bash
-   python gif_generator.py
+   python gif_animation_maker.py
    ```
 
 3. **GUIでの操作**
