@@ -24,6 +24,7 @@
    ```bash
    python gif_animation_maker.py
    ```
+   環境を整えるのが面倒な人は[Windowsバイナリ](https://github.com/haruka8015/gif_animation_maker/releases)を使ってください。
 
 3. **GUIでの操作**
 
