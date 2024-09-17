@@ -90,9 +90,10 @@ def main():
     if not os.path.exists(image_folder):
         os.makedirs(image_folder)
 
-    # 対応する画像ファイルの取得とソート
-    image_files = [f for f in os.listdir(image_folder) if f.lower().endswith(('.png', '.bmp', '.gif'))]
-    image_files.sort()  # ファイル名の辞書順
+    # 画像ファイルの取得とソート
+    image_files = [f for f in os.listdir(image_folder)
+                   if f.lower().endswith(('.png', '.bmp', '.gif'))]
+    image_files.sort()
 
     if not image_files:
         messagebox.showerror("エラー", f"フォルダ '{image_folder}' に画像ファイルが見つかりません。")
@@ -108,32 +109,50 @@ def main():
     root = tk.Tk()
     root.title("GIF Generator Tool")
 
+    # ウィンドウサイズの変更に追従するための設定
+    root.columnconfigure(0, weight=1)
+    root.rowconfigure(0, weight=1)
+
     frame = ttk.Frame(root, padding=10)
-    frame.grid(row=0, column=0, sticky=(tk.N, tk.W, tk.E, tk.S))
+    frame.grid(row=0, column=0, sticky="nsew")
 
-    # フレームのスクロール設定
-    canvas = tk.Canvas(frame)
-    scrollbar = ttk.Scrollbar(frame, orient="vertical", command=canvas.yview)
-    scrollable_frame = ttk.Frame(canvas)
-
-    scrollable_frame.bind(
-        "<Configure>",
-        lambda e: canvas.configure(
-            scrollregion=canvas.bbox("all")
-        )
-    )
-
-    canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-    canvas.configure(yscrollcommand=scrollbar.set)
-
-    canvas.grid(row=0, column=0, sticky="nsew")
-    scrollbar.grid(row=0, column=1, sticky="ns")
-
-    # レイアウトの設定
     frame.columnconfigure(0, weight=1)
     frame.rowconfigure(0, weight=1)
 
-    ttk.Label(scrollable_frame, text="各フレームの遅延時間をミリ秒で入力してください。").grid(row=0, column=0, columnspan=3)
+    # キャンバスとスクロールバーの設定
+    canvas = tk.Canvas(frame)
+    scrollbar = ttk.Scrollbar(frame, orient="vertical", command=canvas.yview)
+    canvas.grid(row=0, column=0, sticky="nsew")
+    scrollbar.grid(row=0, column=1, sticky="ns")
+
+    # スクロール可能なフレームをキャンバスに配置
+    scrollable_frame = ttk.Frame(canvas)
+
+    # キャンバスにスクロール可能なフレームを配置し、そのIDを取得
+    canvas_window = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+
+    # スクロール領域を更新
+    def on_scrollable_frame_configure(event):
+        canvas.configure(scrollregion=canvas.bbox("all"))
+
+    scrollable_frame.bind("<Configure>", on_scrollable_frame_configure)
+
+    # キャンバスサイズ変更時にフレームの幅を更新
+    def on_canvas_configure(event):
+        canvas.itemconfig(canvas_window, width=event.width)
+
+    canvas.bind('<Configure>', on_canvas_configure)
+
+    canvas.configure(yscrollcommand=scrollbar.set)
+
+    # スクロール可能なフレーム内のレイアウト設定
+    scrollable_frame.columnconfigure(0, weight=0)
+    scrollable_frame.columnconfigure(1, weight=1)
+    scrollable_frame.columnconfigure(2, weight=0)
+
+    # GUI要素の作成
+    ttk.Label(scrollable_frame, text="各フレームの遅延時間をミリ秒で入力してください。") \
+        .grid(row=0, column=0, columnspan=3, sticky="w")
 
     delay_entries = []
     image_thumbnails = []
@@ -148,21 +167,26 @@ def main():
 
         # 画像の表示
         image_label = ttk.Label(scrollable_frame, image=img_tk)
-        image_label.grid(row=idx+1, column=0, sticky=tk.W)
+        image_label.grid(row=idx+1, column=0, sticky="w")
 
         # ファイル名の表示
-        ttk.Label(scrollable_frame, text=file_name).grid(row=idx+1, column=1, sticky=tk.W)
+        ttk.Label(scrollable_frame, text=file_name).grid(row=idx+1, column=1, sticky="w")
 
         # 遅延時間の入力
         default_delay = config_data.get(file_name, 100)
         delay_var = tk.StringVar(value=str(default_delay))
         entry = ttk.Entry(scrollable_frame, textvariable=delay_var, width=10)
-        entry.grid(row=idx+1, column=2)
+        entry.grid(row=idx+1, column=2, sticky="e")
         delay_entries.append(delay_var)
 
     # Twitchエモート用のチェックボックスを追加（デフォルトはFalse）
     use_twitch_emotes = tk.BooleanVar(value=False)
-    ttk.Checkbutton(scrollable_frame, text="Twitchエモート用", variable=use_twitch_emotes).grid(row=len(image_files)+1, column=0, columnspan=3, sticky=tk.W)
+    ttk.Checkbutton(scrollable_frame, text="Twitchエモート用",
+                    variable=use_twitch_emotes).grid(row=len(image_files)+1, column=0, columnspan=3, sticky="w")
+
+    # GIF生成ボタン
+    generate_button = ttk.Button(scrollable_frame, text="GIFを生成", command=lambda: on_generate())
+    generate_button.grid(row=len(image_files)+2, column=0, columnspan=3, pady=10)
 
     def on_generate():
         try:
@@ -177,9 +201,6 @@ def main():
             generate_gif(delay_times, image_files, use_twitch_emotes.get())
         except ValueError as e:
             messagebox.showerror("エラー", f"遅延時間には整数を入力してください。\n詳細: {e}")
-
-    generate_button = ttk.Button(scrollable_frame, text="GIFを生成", command=on_generate)
-    generate_button.grid(row=len(image_files)+2, column=0, columnspan=3)
 
     root.mainloop()
 
